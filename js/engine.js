@@ -123,6 +123,10 @@ var Engine = (function(global) {
          * and, using the rowImages array, draw the correct image for that
          * portion of the "grid"
          */
+        /* Begin by clearing the canvas (clears any image data that bled
+         * into transparent areas
+         */
+        ctx.clearRect(0,0,canvas.width, canvas.height);
         for (row = 0; row < numRows; row++) {
             for (col = 0; col < numCols; col++) {
                 /* The drawImage function of the canvas' context element
