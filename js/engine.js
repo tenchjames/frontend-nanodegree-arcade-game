@@ -94,7 +94,14 @@ var Engine = (function(global) {
         allEnemies.forEach(function(enemy) {
             enemy.update(dt);
         });
+        game.itemsOnBoard.forEach(function(item) {
+            if (typeof item !== "undefined")
+                item.update(dt);
+        });
+
         player.update();
+        // run this last after all moves have happened
+        game.update();
     }
 
     /* This function initially draws the "game level", it will then call
@@ -123,10 +130,6 @@ var Engine = (function(global) {
          * and, using the rowImages array, draw the correct image for that
          * portion of the "grid"
          */
-        /* Begin by clearing the canvas (clears any image data that bled
-         * into transparent areas
-         */
-        ctx.clearRect(0,0,canvas.width, canvas.height);
         for (row = 0; row < numRows; row++) {
             for (col = 0; col < numCols; col++) {
                 /* The drawImage function of the canvas' context element
@@ -156,7 +159,12 @@ var Engine = (function(global) {
             enemy.render();
         });
 
+        game.itemsOnBoard.forEach(function(item) {
+            if (typeof item !== "undefined")
+                item.render();
+        });
         player.render();
+
     }
 
     /* This function does nothing but it could have been a good place to
@@ -176,7 +184,14 @@ var Engine = (function(global) {
         'images/water-block.png',
         'images/grass-block.png',
         'images/enemy-bug.png',
-        'images/char-boy.png'
+        'images/char-boy.png',
+        'images/Gem Blue.png',
+        'images/Gem Green.png',
+        'images/Gem Orange.png',
+        'images/Key.png',
+        'images/Heart.png',
+        'images/Star.png',
+        'images/Rock.png'
     ]);
     Resources.onReady(init);
 
