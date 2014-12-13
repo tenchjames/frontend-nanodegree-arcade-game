@@ -101,7 +101,7 @@ var Engine = (function(global) {
 
         player.update();
         // run this last after all moves have happened
-        game.update();
+        game.update(dt);
     }
 
     /* This function initially draws the "game level", it will then call
@@ -164,6 +164,7 @@ var Engine = (function(global) {
                 item.render();
         });
         player.render();
+        game.render();
 
     }
 
