@@ -62,13 +62,7 @@ Enemy.prototype.createCoords = function(level) {
 var Player = function () {
     // have to call this without params to set default size
     GamePiece.call(this);
-    var x  = ctx.canvas.width / 2 - this.width / 2 ;
-    var y = ctx.canvas.height - this.height - 60;
-    this.center = {};
-    // now update the coords, and set the center
-    // attribute that will be used for collision detection
-    this.updateCoords(x,y);
-    this.updateCenter();
+    this.reset();
     this.sprite = 'images/char-boy.png';
     this.points = 0;
     this.life = 100;
@@ -83,7 +77,13 @@ Player.prototype.update = function() {
 Player.prototype.render = function() {
     ctx.drawImage(Resources.get(this.sprite),this.x,this.y);
 }
-
+Player.prototype.reset = function() {
+    var x  = ctx.canvas.width / 2 - this.width / 2 ;
+    var y = ctx.canvas.height - this.height - 60;
+    this.center = {};
+    this.updateCoords(x,y);
+    this.updateCenter();
+}
 Player.prototype.handleInput = function(code) {
     var move = {x: 0, y:0 };
     if (code === 'down') {
@@ -213,18 +213,13 @@ Game.prototype.init = function() {
 
 //render any general game things like score animations and points
 Game.prototype.render = function() {
-    for (var i = 0; i < this.pointAnimations.length; i += 1) {
-        ctx.save();
-        ctx.fillStyle = this.pointAnimations[i].color;
-        ctx.font = 'normal bold 2em "Lucida Console"';
-        ctx.fillText(this.pointAnimations[i].points,this.pointAnimations[i].x,this.pointAnimations[i].y);
-        ctx.restore();
-    }
+    this.renderPointAnimations();
+    this.updateScores();
 };
 
 Game.prototype.update = function(dt) {
     this.checkPlayerGetsItem();
-    this.doPointAnimations(dt);
+    this.updatePointAnimations(dt);
     var nItemsRemaining = this.removeExpiredItems();
     this.spawnItems(nItemsRemaining);
     this.checkPlayerHitsEnemy();
@@ -329,6 +324,7 @@ Game.prototype.checkPlayerHitsEnemy = function() {
 
 Game.prototype.enemyGotPlayer = function() {
     document.getElementById('life').innerHTML = player.life;
+    player.reset();
 }
 
 Game.prototype.itemCollidesWithPlayer = function(item) {
@@ -341,7 +337,7 @@ Game.prototype.itemCollidesWithPlayer = function(item) {
  * Checks if the velocity has reached 0 and removes
  * it from the array if so
  */
-Game.prototype.doPointAnimations = function(dt) {
+Game.prototype.updatePointAnimations = function(dt) {
     for (var i = this.pointAnimations.length - 1; i >= 0; i -= 1) {
         if (this.pointAnimations[i].v <= 0) {
             this.pointAnimations.splice(i,1);
@@ -354,8 +350,21 @@ Game.prototype.doPointAnimations = function(dt) {
     }
 }
 
-Game.prototype.updateScores = function() {
+Game.prototype.renderPointAnimations = function() {
+    for (var i = 0; i < this.pointAnimations.length; i += 1) {
+        ctx.save();
+        ctx.fillStyle = this.pointAnimations[i].color;
+        ctx.font = 'normal bold 2em "Lucida Console"';
+        ctx.fillText(this.pointAnimations[i].points,this.pointAnimations[i].x,this.pointAnimations[i].y);
+        ctx.restore();
+    }
+}
 
+Game.prototype.updateScores = function() {
+    ctx.save();
+    ctx.font = '12pt Arial';
+    ctx.fillText("Score: " + this.gameScore,ctx.canvas.width - 150, 15);
+    ctx.restore();
 };
 
 Game.prototype.resetToLevelOneGameItems = function() {
