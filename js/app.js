@@ -6,12 +6,12 @@ var GamePiece = function(x, y) {
     // default to off screen if not defined
     this.x = x || -101;
     this.y = y || -171;
-}
+};
 
 GamePiece.prototype.updateCoords = function(x, y) {
     this.x = x;
     this.y = y;
-}
+};
 
 // Enemies our player must avoid
 var Enemy = function(level) {
@@ -25,7 +25,7 @@ var Enemy = function(level) {
     this.x = coords.x;
     this.y = coords.y;
     GamePiece.call(this,this.x,this.y);
-}
+};
 
 Enemy.prototype = Object.create(GamePiece.prototype);
 Enemy.prototype.constructor = Enemy;
@@ -42,18 +42,18 @@ Enemy.prototype.update = function(dt) {
         this.x = coords.x;
         this.y = coords.y;
     }
-}
+};
 Enemy.prototype.render = function() {
     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-}
+};
 
 Enemy.prototype.createCoords = function(level) {
-    var coords = {}
+    var coords = {};
     // generate x value at a random location off screen
     coords.x = ((Math.random()*level) * -1) - this.width;
     coords.y = (Math.floor(Math.random()*3))*83 + 63;
     return coords;
-}
+};
 
 
 // Now write your own player class
@@ -62,22 +62,29 @@ Enemy.prototype.createCoords = function(level) {
 var Player = function () {
     // have to call this without params to set default size
     GamePiece.call(this);
+    this.init();
+};
+
+Player.prototype = Object.create(GamePiece.prototype);
+Player.prototype.constructor = Player;
+
+// called by game engine to keep player center coordinates updated
+Player.prototype.update = function() {
+    this.updateCenter();
+};
+Player.prototype.render = function() {
+    ctx.drawImage(Resources.get(this.sprite),this.x,this.y);
+};
+
+// initialization of attributes and location
+Player.prototype.init = function() {
     this.reset();
     this.sprite = 'images/char-boy.png';
     this.points = 0;
     this.life = 100;
     this.alive = true;
-}
+};
 
-Player.prototype = Object.create(GamePiece.prototype);
-Player.prototype.constructor = Player;
-
-Player.prototype.update = function() {
-    this.updateCenter();
-}
-Player.prototype.render = function() {
-    ctx.drawImage(Resources.get(this.sprite),this.x,this.y);
-}
 Player.prototype.reset = function() {
     var x  = ctx.canvas.width / 2 - this.width / 2 ;
     var y = ctx.canvas.height - this.height - 60;
@@ -88,39 +95,42 @@ Player.prototype.reset = function() {
     // check if the player is still alive, if not
     // end the game
     if (this.life <= 0) {
+        this.life = 0;
         this.alive = false;
     }
-
-}
+};
 Player.prototype.handleInput = function(code) {
-    var move = {x: 0, y:0 };
-    if (code === 'down') {
-        move.y = 83
+    // make sure the player is alive
+    if (player.alive) {
+        var move = {x: 0, y:0 };
+        if (code === 'down') {
+            move.y = 83
+        }
+        else if (code === 'up') {
+            move.y = -83
+        }
+        else if (code === 'left') {
+            move.x = -101;
+        }
+        else if (code === 'right') {
+            move.x = 101;
+        }
+        if (this.x + move.x < 0 || this.x + move.x + this.width > ctx.canvas.width) {
+            move.x = 0;
+        }
+        if (this.y + move.y < 0 || this.y + move.y + this.height > ctx.canvas.height) {
+            move.y = 0;
+        }
+        this.x += move.x;
+        this.y += move.y;
+        this.updateCenter();
     }
-    else if (code === 'up') {
-        move.y = -83
-    }
-    else if (code === 'left') {
-        move.x = -101;
-    }
-    else if (code === 'right') {
-        move.x = 101;
-    }
-    if (this.x + move.x < 0 || this.x + move.x + this.width > ctx.canvas.width) {
-        move.x = 0;
-    }
-    if (this.y + move.y < 0 || this.y + move.y + this.height > ctx.canvas.height) {
-        move.y = 0;
-    }
-    this.x += move.x;
-    this.y += move.y;
-    this.updateCenter();
-}
+};
 
 Player.prototype.updateCenter = function() {
     this.center.x = this.x + 50;
     this.center.y = this.y + 140;
-}
+};
 
 // takes an object to create an game item for the board
 var GameItem = function(item,x,y) {
@@ -133,7 +143,7 @@ var GameItem = function(item,x,y) {
     this.life = item.life;
     this.color = item.color;
     this.init();
-}
+};
 GameItem.prototype = Object.create(GamePiece.prototype);
 GameItem.prototype.constructor = GameItem;
 
@@ -141,7 +151,7 @@ GameItem.prototype.render = function() {
     if (this.active) {
         ctx.drawImage(Resources.get(this.sprite),this.x,this.y);
     }
-}
+};
 GameItem.prototype.init = function() {
     this.active = true;
     this.defaultTimeRemaining = this.timeRemaining;
@@ -149,7 +159,7 @@ GameItem.prototype.init = function() {
     this.defaultLife = this.life;
     this.center = {"x": this.x + 50, "y": this.y + 133};
 
-}
+};
 GameItem.prototype.update = function(dt) {
     if (this.active) {
         this.timeRemaining -= dt;
@@ -157,38 +167,18 @@ GameItem.prototype.update = function(dt) {
             this.active = false;
         }
     }
-}
+};
 
 /* Game play functions and variables */
 var Game = function() {
-    // the level of the game which drives the difficulty
-    this.level = 1;
     player = new Player();
     allEnemies = [];
-    // keep track of score by level and total game
-    this.levelScore = 0;
-    this.gameScore = 0;
-
-    this.gameOver = false;
-
-    // activate bonus level when something special happens (like catching a star);
-    this.isBonusLevel = false;
-
-    // items that can spawn in the game, weighting, and other attributes can be adjusted as game progresses
-    this.gameItems = this.resetToLevelOneGameItems();
-
-    // items currently on the game board
-    this.itemsOnBoard = [];
-
-    // points animations
-    this.pointAnimations = [];
-
-    this.playcols = 5;
-    this.playRows = 3;
+    this.nextLevel = function() {
+        return Math.ceil(Math.pow(this.level,2) /.19);
+    }
 
     this.init();
-
-}
+};
 
 Game.prototype.generateWeightedList = function(items) {
     // random generation adapted from http://codetheory.in/
@@ -201,71 +191,155 @@ Game.prototype.generateWeightedList = function(items) {
     }
     return weighted_list;
 };
-// TODO: MOVE TO END
-Game.prototype.init = function() {
-    this.weighted_list = this.generateWeightedList(this.gameItems);
 
+Game.prototype.init = function() {
+    // keep track of score by level and total game
+    this.levelScore = 0;
+    this.gameScore = 0;
+
+    this.level = 1;
+
+    this.gameOver = false;
+
+    // activate bonus level when something special happens (like catching a star);
+    this.isBonusLevel = false;
+
+    // items that can spawn in the game, weighting, and other attributes can be adjusted as game progresses
+    this.gameItems = this.resetToLevelOneGameItems();
+
+    this.weighted_list = this.generateWeightedList(this.gameItems);
+    // items currently on the game board
+    this.itemsOnBoard = [];
+
+    // points animations
+    this.pointAnimations = [];
+
+    this.playcols = 5;
+    this.playRows = 3;
     // set itemsOnBoard to empty objects initially
-    for (var i = 0; i < this.playcols*this.playRows; i += 1) {
+    var i = 0;
+    for (i; i < this.playcols*this.playRows; i += 1) {
         this.itemsOnBoard.push(undefined);
     }
 
-    // limit number of enemies to 5 since only 3 rows
-    var maxEnemies = Math.floor(Math.random()*5) + 1;
+    // load enemies
+    this.resetEnemies();
+
+    // update any player data based on level
+};
+
+Game.prototype.resetEnemies = function() {
+    // reset all enemies to empty array
+    // needed for game resets to level 1
+    allEnemies = [];
+    var maxEnemies = Math.floor(Math.sqrt(this.level));
     // load up the enemies
     for (var i = 0; i < maxEnemies; i += 1) {
         var enemy = new Enemy(this.level);
         allEnemies.push(enemy);
     }
-
-    // update any player data based on level
 };
+
+Game.prototype.levelUp = function() {
+    this.levelScore = 0;
+    this.level += 1;
+    this.resetEnemies();
+    player.reset();
+};
+
+Game.prototype.renderLevelUp = function() {
+
+}
 
 //render any general game things like score animations and points
 Game.prototype.render = function() {
     this.renderPointAnimations();
-    this.updateScores();
+    this.renderScores();
+    // check if player is alive
+    if (!player.alive) {
+        this.renderGameOver();
+    }
 };
 
 Game.prototype.update = function(dt) {
-    this.checkPlayerGetsItem();
-    this.updatePointAnimations(dt);
-    var nItemsRemaining = this.removeExpiredItems();
-    this.spawnItems(nItemsRemaining);
-    this.checkPlayerHitsEnemy();
-    this.playerIsStillAlive();
+    // only do this stuff if the player is alive
+    if (player.alive) {
+        this.checkPlayerGetsItem();
+        this.updatePointAnimations(dt);
+        var nItemsRemaining = this.removeExpiredItems();
+        this.spawnItems(nItemsRemaining);
+        this.checkPlayerHitsEnemy();
+        this.playerIsStillAlive();
+
+        // simple progressive way to track level up
+        if (this.levelScore >= this.nextLevel()) {
+            this.levelUp();
+        }
+    }
 };
 
-Game.prototype.spawnItems = function(nItems) {
-    var maxItems = this.level % 5 + 1;
+Game.prototype.renderGameOver = function() {
+    ctx.save();
+    ctx.fillStyle = 'red';
+    ctx.font = '60px bold Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over',ctx.canvas.width / 2, ctx.canvas.height / 2);
+    ctx.fillStyle = 'magenta';
+    ctx.font = '24px bold Arial';
+    ctx.fillText('Press SPACE BAR to play again', ctx.canvas.width / 2, ctx.canvas.height / 2 + 50);
+    ctx.restore();
+}
 
+Game.prototype.spawnItems = function(nItems) {
+    var maxItems = 0;
+    if (this.isBonusLevel) {
+        maxItems = 14;
+    }
+    else if (this.level > 5) {
+        maxItems = 5;
+    }
+    else {
+        maxItems = this.level;
+    }
     if (nItems < maxItems) {
         // generate random row and column locations
         var col = Math.floor(Math.random()*5);
         var row = Math.floor(Math.random()*3);
 
+        // calculate a 10 by 10 bounding box for would be new item
+        // check if this would spawn where the player currently is
+        // located
+        var item = {
+            "left": col*101 + 40,
+            "right": col*101 + 60,
+            "top": row*83+50 + 123,
+            "bottom": row*83+50 + 143
+        };
         // check if there is an item at this spawn location
         var canSpawn = true;
-        if (typeof this.itemsOnBoard[row*col + col] !== "undefined") {
+        if (typeof this.itemsOnBoard[row*col + col] !== "undefined" || this.itemCollidesWithPlayer(item)) {
             canSpawn = false;
         }
 
         // based on your level, how frequently should items spawn
         var shouldSpawn = false;
-        var rNum = Math.floor(Math.random()*1000);
-        if (this.level*2 > rNum) {
-            shouldSpawn = true;
+        // only check this if the item can spawn there
+        if (canSpawn) {
+            var rNum = Math.floor(Math.random()*1000);
+            if (this.level > rNum || this.level < 15) {
+                shouldSpawn = true;
+            }
         }
+
 
         // if we can spawn, randomly pick an item type to spawn
         if (canSpawn && shouldSpawn) {
             var randItem = Math.floor(Math.random()*1000);
             var index = this.weighted_list[randItem];
-            var item = new GameItem(this.gameItems[index],col*101,row*83+50);
-            this.itemsOnBoard[row*col + col] = item;
+            this.itemsOnBoard[row*col + col] = new GameItem(this.gameItems[index],col*101,row*83+50);
         }
     }
-}
+};
 
 /**
  * Removes expired game items from the active array of items
@@ -284,7 +358,7 @@ Game.prototype.removeExpiredItems = function() {
         }
     }
     return nItems;
-}
+};
 
 Game.prototype.checkPlayerGetsItem = function() {
     for (var i = 0; i < this.itemsOnBoard.length; i += 1) {
@@ -305,6 +379,7 @@ Game.prototype.checkPlayerGetsItem = function() {
         if (this.itemCollidesWithPlayer(item)) {
             currentItem.active = false;
             this.gameScore += currentItem.points;
+            this.levelScore += currentItem.points;
             if (player.life + currentItem.life < 100)
                 player.life += currentItem.life;
             else
@@ -332,26 +407,24 @@ Game.prototype.checkPlayerHitsEnemy = function() {
             "bottom": allEnemies[i].y + 130
         };
         if (this.itemCollidesWithPlayer(item)) {
-            player.life -= 5 + this.level % 94;
-            this.enemyGotPlayer();
+            var damage = this.level;
+            player.life -= damage > 99 ? 99 : damage;
+            player.reset()
         }
     }
 };
 
-Game.prototype.enemyGotPlayer = function() {
-    player.reset();
-}
 
 Game.prototype.itemCollidesWithPlayer = function(item) {
     return item.left < player.center.x && item.right > player.center.x && item.top < player.center.y && item.bottom > player.center.y
-}
+};
 
 Game.prototype.playerIsStillAlive = function() {
     if (!player.alive) {
         // do some stuff to print score etc
         this.gameOver = true;
     }
-}
+};
 
 /**
  * Loops over an array of point animations
@@ -369,7 +442,7 @@ Game.prototype.updatePointAnimations = function(dt) {
             this.pointAnimations[i].v -= (5 * dt);
         }
     }
-}
+};
 
 Game.prototype.renderPointAnimations = function() {
     for (var i = 0; i < this.pointAnimations.length; i += 1) {
@@ -379,17 +452,29 @@ Game.prototype.renderPointAnimations = function() {
         ctx.fillText(this.pointAnimations[i].points,this.pointAnimations[i].x,this.pointAnimations[i].y);
         ctx.restore();
     }
-}
+};
 
-Game.prototype.updateScores = function() {
+Game.prototype.renderScores = function() {
     ctx.save();
-    ctx.clearRect(0,0,ctx.canvas.width,45);
-    ctx.font = '24px Arial';
-    ctx.fillText("Life: ",0,40,50);
-    ctx.fillText("Score: ",300, 40,50);
-    ctx.fillStyle = 'magenta';
-    ctx.fillText(this.gameScore,350,40);
-    ctx.fillText(player.life,50,40);
+    ctx.clearRect(0,0,ctx.canvas.width,50);
+    ctx.font = '14px Arial';
+    ctx.fillText("Life: ",0,15,50);
+    ctx.fillText("Level: ",0,30,50);
+    ctx.fillText("Next Level: ",0,45);
+    ctx.fillText("Score: ",300, 15,50);
+    ctx.fillStyle = 'blue';
+    ctx.fillText(this.gameScore.toString(),350,15);
+    ctx.fillText(player.life.toString(),50,15);
+    ctx.fillText(this.level.toString(),50,30);
+    ctx.fillStyle = 'green';
+    ctx.lineWidth = 2;
+    var levelProgress = (this.levelScore / this.nextLevel()) * 100;
+    ctx.fillRect(75,35,levelProgress,12);
+    ctx.strokeRect(75,35,100,12);
+    ctx.font = '10px Arial';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.levelScore + " / " + this.nextLevel().toString(), 125, 45);
     ctx.restore();
 };
 
@@ -400,7 +485,7 @@ Game.prototype.resetToLevelOneGameItems = function() {
         {"type": "greenGem", "weight": .15, "sprite": "images/Gem Green.png",
             "points": 10, "life": 1, "timeRemaining": 4, "color": "green"},
         {"type": "orangeGem", "weight": .075, "sprite": "images/Gem Orange.png",
-            "points": 25, "life": 2, "timeRemaining": 3, "color": "orange"},
+            "points": 20, "life": 2, "timeRemaining": 3, "color": "orange"},
         {"type": "heart", "weight": .1, "sprite": "images/Heart.png",
             "points": 0, "life": 25, "timeRemaining": 4, "color": "red"},
         {"type": "key", "weight": .025, "sprite": "images/Key.png",
@@ -410,8 +495,14 @@ Game.prototype.resetToLevelOneGameItems = function() {
         {"type": "star", "weight": .05, "sprite": "images/Star.png",
             "points": 25, "life": 100, "timeRemaining": 2, "color": "yellow"}
     ];
-}
+};
 
+Game.prototype.handleInput = function(code) {
+    if (!player.alive && code === 'SPACEBAR') {
+        player.init();
+        game.init();
+    }
+}
 
 // Now instantiate your objects.
 // Place all enemy objects in an array called allEnemies
@@ -419,7 +510,7 @@ Game.prototype.resetToLevelOneGameItems = function() {
 
 var startGame = function() {
     game = new Game();
-}
+};
 
 Resources.onReady(startGame);
 
@@ -435,4 +526,11 @@ document.addEventListener('keyup', function(e) {
     };
 
     player.handleInput(allowedKeys[e.keyCode]);
+});
+
+document.addEventListener('keydown', function(e) {
+    var allowedKeys = {
+        32: 'SPACEBAR'
+    };
+    game.handleInput(allowedKeys[e.keyCode]);
 });
