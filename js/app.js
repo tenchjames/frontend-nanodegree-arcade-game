@@ -19,7 +19,7 @@ var Enemy = function(level) {
     // we've provided one for you to get started
     this.sprite = 'images/enemy-bug.png';
     this.level = level;
-    this.velocity = (Math.random() * 75) + level;
+    this.velocity = (Math.random() * 101) + level;
     // generate at random row and column
     var coords = this.createCoords(level);
     this.x = coords.x;
@@ -66,6 +66,7 @@ var Player = function () {
     this.sprite = 'images/char-boy.png';
     this.points = 0;
     this.life = 100;
+    this.alive = true;
 }
 
 Player.prototype = Object.create(GamePiece.prototype);
@@ -83,6 +84,13 @@ Player.prototype.reset = function() {
     this.center = {};
     this.updateCoords(x,y);
     this.updateCenter();
+
+    // check if the player is still alive, if not
+    // end the game
+    if (this.life <= 0) {
+        this.alive = false;
+    }
+
 }
 Player.prototype.handleInput = function(code) {
     var move = {x: 0, y:0 };
@@ -114,7 +122,6 @@ Player.prototype.updateCenter = function() {
     this.center.y = this.y + 140;
 }
 
-// TODO: CAN I PASS X&Y UP CHAIN
 // takes an object to create an game item for the board
 var GameItem = function(item,x,y) {
     GamePiece.call(this,x,y);
@@ -129,6 +136,7 @@ var GameItem = function(item,x,y) {
 }
 GameItem.prototype = Object.create(GamePiece.prototype);
 GameItem.prototype.constructor = GameItem;
+
 GameItem.prototype.render = function() {
     if (this.active) {
         ctx.drawImage(Resources.get(this.sprite),this.x,this.y);
@@ -154,12 +162,14 @@ GameItem.prototype.update = function(dt) {
 /* Game play functions and variables */
 var Game = function() {
     // the level of the game which drives the difficulty
-    this.level = 9;
+    this.level = 1;
     player = new Player();
     allEnemies = [];
     // keep track of score by level and total game
     this.levelScore = 0;
     this.gameScore = 0;
+
+    this.gameOver = false;
 
     // activate bonus level when something special happens (like catching a star);
     this.isBonusLevel = false;
@@ -201,10 +211,10 @@ Game.prototype.init = function() {
     }
 
     // limit number of enemies to 5 since only 3 rows
-    var maxEnemies = this.level % 3 + 1;
+    var maxEnemies = Math.floor(Math.random()*5) + 1;
     // load up the enemies
     for (var i = 0; i < maxEnemies; i += 1) {
-        var enemy = new Enemy(i + 1);
+        var enemy = new Enemy(this.level);
         allEnemies.push(enemy);
     }
 
@@ -223,6 +233,7 @@ Game.prototype.update = function(dt) {
     var nItemsRemaining = this.removeExpiredItems();
     this.spawnItems(nItemsRemaining);
     this.checkPlayerHitsEnemy();
+    this.playerIsStillAlive();
 };
 
 Game.prototype.spawnItems = function(nItems) {
@@ -277,31 +288,36 @@ Game.prototype.removeExpiredItems = function() {
 
 Game.prototype.checkPlayerGetsItem = function() {
     for (var i = 0; i < this.itemsOnBoard.length; i += 1) {
+        var currentItem = this.itemsOnBoard[i];
         // if it is undefined, skip this iteration
-        if (typeof this.itemsOnBoard[i] === "undefined") {
+        if (typeof currentItem === "undefined") {
             continue;
         }
         // create a small bounding box for the item
         // then test if the player center is inside
         // that bounding box
         var item = {
-            "left": this.itemsOnBoard[i].center.x - 10,
-            "right": this.itemsOnBoard[i].center.x + 10,
-            "top": this.itemsOnBoard[i].center.y - 10,
-            "bottom": this.itemsOnBoard[i].center.y + 10
+            "left": currentItem.center.x - 10,
+            "right": currentItem.center.x + 10,
+            "top": currentItem.center.y - 10,
+            "bottom": currentItem.center.y + 10
         };
         if (this.itemCollidesWithPlayer(item)) {
-            if (this.itemsOnBoard[i].active) {
-                this.itemsOnBoard[i].active = false;
-                this.gameScore += this.itemsOnBoard[i].points;
-                player.life += this.itemsOnBoard[i].life;
-                this.itemsOnBoard[i].timeRemaining = 0;
+            currentItem.active = false;
+            this.gameScore += currentItem.points;
+            if (player.life + currentItem.life < 100)
+                player.life += currentItem.life;
+            else
+                player.life = 100;
+            currentItem.timeRemaining = 0;
 
-                var animate = {"points": this.itemsOnBoard[i].points, "color":this.itemsOnBoard[i].color,
-                    "x": this.itemsOnBoard[i].center.x, "y": this.itemsOnBoard[i].center.y, "v": 3};
+            var animate = {"points": currentItem.points, "color": currentItem.color,
+                "x": currentItem.center.x, "y": currentItem.center.y, "v": 3};
 
-                this.pointAnimations.push(animate);
-                document.getElementById('score').innerHTML = this.gameScore;
+            this.pointAnimations.push(animate);
+
+            if (currentItem.type === "obstacle") {
+                player.reset();
             }
         }
     }
@@ -310,20 +326,19 @@ Game.prototype.checkPlayerGetsItem = function() {
 Game.prototype.checkPlayerHitsEnemy = function() {
     for (var i = 0; i < allEnemies.length; i += 1) {
         var item = {
-            "left": allEnemies[i].x + 60,
-            "right": allEnemies[i].x + 100,
+            "left": allEnemies[i].x + 10,
+            "right": allEnemies[i].x + 90,
             "top": allEnemies[i].y + 110,
             "bottom": allEnemies[i].y + 130
         };
         if (this.itemCollidesWithPlayer(item)) {
-            player.life -= 5;
+            player.life -= 5 + this.level % 94;
             this.enemyGotPlayer();
         }
     }
 };
 
 Game.prototype.enemyGotPlayer = function() {
-    document.getElementById('life').innerHTML = player.life;
     player.reset();
 }
 
@@ -331,6 +346,12 @@ Game.prototype.itemCollidesWithPlayer = function(item) {
     return item.left < player.center.x && item.right > player.center.x && item.top < player.center.y && item.bottom > player.center.y
 }
 
+Game.prototype.playerIsStillAlive = function() {
+    if (!player.alive) {
+        // do some stuff to print score etc
+        this.gameOver = true;
+    }
+}
 
 /**
  * Loops over an array of point animations
@@ -354,7 +375,7 @@ Game.prototype.renderPointAnimations = function() {
     for (var i = 0; i < this.pointAnimations.length; i += 1) {
         ctx.save();
         ctx.fillStyle = this.pointAnimations[i].color;
-        ctx.font = 'normal bold 2em "Lucida Console"';
+        ctx.font = 'normal bold 2em Arial';
         ctx.fillText(this.pointAnimations[i].points,this.pointAnimations[i].x,this.pointAnimations[i].y);
         ctx.restore();
     }
@@ -362,24 +383,29 @@ Game.prototype.renderPointAnimations = function() {
 
 Game.prototype.updateScores = function() {
     ctx.save();
-    ctx.font = '12pt Arial';
-    ctx.fillText("Score: " + this.gameScore,ctx.canvas.width - 150, 15);
+    ctx.clearRect(0,0,ctx.canvas.width,45);
+    ctx.font = '24px Arial';
+    ctx.fillText("Life: ",0,40,50);
+    ctx.fillText("Score: ",300, 40,50);
+    ctx.fillStyle = 'magenta';
+    ctx.fillText(this.gameScore,350,40);
+    ctx.fillText(player.life,50,40);
     ctx.restore();
 };
 
 Game.prototype.resetToLevelOneGameItems = function() {
     return [
-        {"type": "blueGem", "weight": .40, "sprite": "images/Gem Blue.png",
-            "points": 5, "life": 1, "timeRemaining": 5, "color": "blue"},
-        {"type": "greenGem", "weight": .25, "sprite": "images/Gem Green.png",
-            "points": 10, "life": 2, "timeRemaining": 4, "color": "green"},
+        {"type": "blueGem", "weight": .50, "sprite": "images/Gem Blue.png",
+            "points": 5, "life": 0, "timeRemaining": 5, "color": "blue"},
+        {"type": "greenGem", "weight": .15, "sprite": "images/Gem Green.png",
+            "points": 10, "life": 1, "timeRemaining": 4, "color": "green"},
         {"type": "orangeGem", "weight": .075, "sprite": "images/Gem Orange.png",
-            "points": 25, "life": 3, "timeRemaining": 3, "color": "orange"},
+            "points": 25, "life": 2, "timeRemaining": 3, "color": "orange"},
         {"type": "heart", "weight": .1, "sprite": "images/Heart.png",
             "points": 0, "life": 25, "timeRemaining": 4, "color": "red"},
-        {"type": "key", "weight": .075, "sprite": "images/Key.png",
+        {"type": "key", "weight": .025, "sprite": "images/Key.png",
             "points": 5, "life": 0, "timeRemaining": 2, "color": "gold"},
-        {"type": "obstacle", "weight": .05, "sprite": "images/Rock.png",
+        {"type": "obstacle", "weight": .1, "sprite": "images/Rock.png",
             "points": -5, "life": -5, "timeRemaining": 5, "color": "gray"},
         {"type": "star", "weight": .05, "sprite": "images/Star.png",
             "points": 25, "life": 100, "timeRemaining": 2, "color": "yellow"}
@@ -410,23 +436,3 @@ document.addEventListener('keyup', function(e) {
 
     player.handleInput(allowedKeys[e.keyCode]);
 });
-
-/* mouse tracking function */
-function windowToCanvas(canvas, x, y) {
-    var bbox = canvas.getBoundingClientRect();
-    return { x: x - bbox.left * (canvas.width  / bbox.width),
-        y: y - bbox.top  * (canvas.height / bbox.height)
-    };
-}
-
-//document.addEventListener('mousemove', function(e) {
-//    e.preventDefault();
-//    var coords = document.getElementById('coords');
-//    var loc = windowToCanvas(ctx.canvas, e.x, e.y);
-//    var text = "";
-//    text += "x: ";
-//    text += loc.x.toFixed(0);
-//    text += ", y: ";
-//    text += loc.y.toFixed(0);
-//    coords.innerHTML = text;
-//});
