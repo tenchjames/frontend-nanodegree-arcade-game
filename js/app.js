@@ -366,7 +366,7 @@ Game.prototype.renderLevelUp = function () {
     ctx.fillText('Level ' + this.level, ctx.canvas.width / 2, ctx.canvas.height / 2);
     ctx.fillStyle = 'magenta';
     ctx.font = '24px bold Arial';
-    ctx.fillText('Choose Avitar number below', ctx.canvas.width / 2, ctx.canvas.height / 2 + 50);
+    ctx.fillText('Choose Avatar number below', ctx.canvas.width / 2, ctx.canvas.height / 2 + 50);
     ctx.fillStyle = 'gold';
     ctx.fillText('Collect Keys to unlock more', ctx.canvas.width / 2, ctx.canvas.height / 2 + 100);
     ctx.restore();
