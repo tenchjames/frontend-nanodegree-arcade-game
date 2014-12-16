@@ -158,13 +158,13 @@ var Engine = (function(global) {
         allEnemies.forEach(function(enemy) {
             enemy.render();
         });
-
-        game.itemsOnBoard.forEach(function(item) {
-            if (typeof item !== "undefined")
-                item.render();
-        });
+        /**
+         * call this first so items are not on top of player
+         */
+        game.renderGameItems();
         player.render();
         game.render();
+
 
     }
 
