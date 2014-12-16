@@ -31,3 +31,7 @@ Level Up:
 Between levels, choose your avatar by pressing key 0, 1, 2, 3, or 4 based on list of avatars available.
 
 The game will start at level 1 automatically. If you die, you can start over by pressing space bar.
+
+Launch index.html to begin!
+
+Enjoy
